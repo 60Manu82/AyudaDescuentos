@@ -279,76 +279,48 @@ Restaurant.init({
 # 2. Frontend
 
 
-Añadir lo siguiente a `RestaurantEndpoints` que está en el frontend, en la carpeta `api`
+Crear lo siguiente a `ConfirmationModal` que está en el frontend, en la carpeta `Components`
 
 ```JSX
-patch
+// This file has been created for solution
 
-import { get, post, destroy, put, patch } from './helpers/ApiRequestsHelper'
-
-function promote (id) {
-  return patch(`restaurants/${id}/promote`)
-}
-
-promote
-export { getAll, getDetail, getRestaurantCategories, create, remove, update, promote }
-```
-
-
-
-Añadir lo siguiente a `CreateRestaurant` que está en el frontend, en la carpeta `screens/restaurants`
-
-```JSX
-<TextRegular>Is it promoted?</TextRegular>
-            <Switch
-                trackColor={{ false: GlobalStyles.brandSecondary, true: GlobalStyles.brandPrimary }}
-                thumbColor={values.promote ? GlobalStyles.brandSecondary : '#f4f3f4'}
-                // onValueChange={toggleSwitch}
-                value={values.promote}
-                style={styles.switch}
-                onValueChange={value =>
-                  setFieldValue('promote', value)
-                }
-              />
-```
-
-
-
-Añadir lo siguiente a `RestaurantScreen` que está en el frontend, en la carpeta `screens/restaurants`
-
-```JSX
-const [restaurantToBePromoted, setRestaurantToBePromoted] = useState(null)
-
-
-{item.promoted &&
-          <TextSemiBold textStyle={styles.promoted }>ON PROMOTION</TextSemiBold>
-        }
-
-
-<Pressable
-            onPress={() => { setRestaurantToBePromoted(item) }}
+import React from 'react'
+import { Modal, Pressable, StyleSheet, View } from 'react-native'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import TextSemiBold from './TextSemibold'
+import * as GlobalStyles from '../styles/GlobalStyles'
+import TextRegular from './TextRegular'
+export default function ConfirmationModal(props) {
+  return (
+    <Modal
+      presentationStyle='overFullScreen'
+      animationType='slide'
+      transparent={true}
+      visible={props.isVisible}
+      onRequestClose={props.onCancel}>
+      <View style={styles.centeredView}>
+        <View style={styles.modalView}>
+          <TextSemiBold textStyle={{ fontSize: 15 }}>A corrective percentage will be applied to the price of this restaurant's products</TextSemiBold>
+          {props.children}
+          <Pressable
+            onPress={props.onCancel}
             style={({ pressed }) => [
               {
                 backgroundColor: pressed
-                  ? GlobalStyles.brandGreenTap
-                  : GlobalStyles.brandSuccess
+                  ? GlobalStyles.brandBlueTap
+                  : GlobalStyles.brandBlue
               },
               styles.actionButton
             ]}>
             <View style={[{ flex: 1, flexDirection: 'row', justifyContent: 'center' }]}>
-              <MaterialCommunityIcons name='star' color={'white'} size={20}/>
+              <MaterialCommunityIcons name='close' color={'white'} size={20} />
               <TextRegular textStyle={styles.text}>
-                Promote
+                Cancel
               </TextRegular>
             </View>
           </Pressable>
-```
-
-Debajo de 
-
-```JSX
-<Pressable
-            onPress={() => { setRestaurantToBeDeleted(item) }}
+          <Pressable
+            onPress={props.onConfirm}
             style={({ pressed }) => [
               {
                 backgroundColor: pressed
@@ -358,66 +330,203 @@ Debajo de
               styles.actionButton
             ]}>
             <View style={[{ flex: 1, flexDirection: 'row', justifyContent: 'center' }]}>
-              <MaterialCommunityIcons name='delete' color={'white'} size={20}/>
+              <MaterialCommunityIcons name='check-outline' color={'white'} size={20} />
               <TextRegular textStyle={styles.text}>
-                Delete
+                Confirm
               </TextRegular>
             </View>
           </Pressable>
+        </View>
+      </View>
+    </Modal>
+  )
+}
+
+const styles = StyleSheet.create({
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 22
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    shadowOpacity: 0.75,
+    shadowRadius: 4,
+    elevation: 5,
+    width: '90%'
+  },
+  actionButton: {
+    borderRadius: 8,
+    height: 40,
+    marginTop: 12,
+    margin: '1%',
+    padding: 10,
+    alignSelf: 'center',
+    flexDirection: 'column',
+    width: '50%'
+  },
+  text: {
+    fontSize: 16,
+    color: 'white',
+    alignSelf: 'center',
+    marginLeft: 5
+  }
+})
 ```
 
 
-Y tambien añadir lo siguiente a `RestaurantScreen` que está en el backend, en la carpeta `screens/restaurants`
+
+Añadir lo siguiente a `CreateRestaurantScreen` que está en el frontend, en la carpeta `screens/restaurants`
 
 ```JSX
-const promoteRestaurant = async (restaurant) => {
-    try {
-      await promote(restaurant.id)
-      await fetchRestaurants()
-      setRestaurantToBePromoted(null)
-      showMessage({
-        message: `Restaurant ${restaurant.name} succesfully promoted`,
-        type: 'success',
-        style: GlobalStyles.flashStyle,
-        titleStyle: GlobalStyles.flashTextStyle
-      })
-    } catch (error) {
-      setRestaurantToBePromoted(null)
-      showMessage({
-        message: `Restaurant ${restaurant.name} could not be promoted.`,
-        type: 'error',
-        style: GlobalStyles.flashStyle,
-        titleStyle: GlobalStyles.flashTextStyle
-      })
+percentage
+import { create, getRestaurantCategories, percentage } from '../../api/RestaurantEndpoints'
+
+percentage: 0
+const initialRestaurantValues = { name: null, description: null, address: null, postalCode: null, url: null, shippingCosts: null, email: null, phone: null, restaurantCategoryId: null, percentage: 0 }
+```
+
+Añadir lo siguiente a `EditRestaurantScreen` que está en el frontend, en la carpeta `screens/restaurants`
+
+```JSX
+import ConfirmationModal from '../../components/ConfirmationModal'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import TextSemiBold from '../../components/TextSemibold'
+```
+
+Y añadir tambien lo siguiente a `EditRestaurantScreen` que está en el frontend, en la carpeta `screens/restaurants`
+
+```JSX
+percentage: 0
+const [initialRestaurantValues, setInitialRestaurantValues] = useState({ name: null, description: null, address: null, postalCode: null, url: null, shippingCosts: null, email: null, phone: null, restaurantCategoryId: null, logo: null, heroImage: null, percentage: 0 })
+  const [percentageShowDialog, setPercentageShowDialog] = useState(false)
+
+Dentro del yup
+ percentage: yup
+      .number()
+      .max(5)
+      .min(-5)
+
+
+const updateRestaurant = async (values) => {
+    setBackendErrors([])
+
+    // Solution
+    if (values.percentage != 0 && !percentageShowDialog) {
+      setPercentageShowDialog(true)
+    } else {
+      // Solution
+      setPercentageShowDialog(false)
+
+      try {
+        const updatedRestaurant = await update(restaurant.id, values)
+        showMessage({
+          message: `Restaurant ${updatedRestaurant.name} succesfully updated`,
+          type: 'success',
+          style: GlobalStyles.flashStyle,
+          titleStyle: GlobalStyles.flashTextStyle
+        })
+        navigation.navigate('RestaurantsScreen', { dirty: true })
+      } catch (error) {
+        console.log(error)
+        setBackendErrors(error.errors)
+      }
     }
   }
+
+```
+
+Y añadir tambien lo siguiente a `EditRestaurantScreen` que está en el frontend, en la carpeta `screens/restaurants` dentro del formik
+```JSX
+<View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20, marginBottom: 10 }} >
+                <Pressable onPress={() => {
+                  let newPercentage = values.percentage + 0.5
+                  if (newPercentage < 5)
+                    setFieldValue('percentage', newPercentage)
+                }}>
+                  <MaterialCommunityIcons
+                    name={'arrow-up-circle'}
+                    color={GlobalStyles.brandSecondaryTap}
+                    size={40}
+                  />
+                </Pressable>
+
+                <TextSemiBold>Porcentaje actual: <TextSemiBold textStyle={{ color: GlobalStyles.brandPrimary }}>{values.percentage.toFixed(1)}%</TextSemiBold></TextSemiBold>
+
+                <Pressable onPress={() => {
+                  let newPercentage = values.percentage - 0.5
+                  if (newPercentage > -5)
+                    setFieldValue('percentage', newPercentage)
+                }}>
+                  <MaterialCommunityIcons
+                    name={'arrow-down-circle'}
+                    color={GlobalStyles.brandSecondaryTap}
+                    size={40}
+                  />
+                </Pressable>
+              </View>
+
+
+
+Al final del formik
+
+<ConfirmationModal
+            isVisible={percentageShowDialog}
+            onCancel={() => setPercentageShowDialog(false)}
+            onConfirm={() => updateRestaurant(values)}>
+          </ConfirmationModal>
 ```
 
 
 
 
-Todo esto dentro de `RestaurantScreen` que está en el backend, en la carpeta `screens/restaurants` dentro de la funcion:
+Añadir lo siguiente a `RestaurantScreen` que está en el frontend, en la carpeta `screens/restaurants`
 
 ```JSX
-export default function RestaurantsScreen ({ navigation, route }) {
+{item.percentage != 0 && <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }} >
+          <TextSemiBold textStyle={{ color: item.percentage > 0 ? 'red' : 'green' }}>{item.percentage > 0 ? '¡Incremento de precios aplicados!' : '¡Descuentos aplicados!'}</TextSemiBold>
+        </View>
+        }
 ```
 
-Y tambien añadir lo siguiente a `RestaurantScreen` que está en el backend, en la carpeta `screens/restaurants` dentro del return de la funcion anterior detrás del `FlatList`
+Debajo de 
 
 ```JSX
-<DeleteModal
-  isVisible={restaurantToBeDeleted !== null}
-  onCancel={() => setRestaurantToBeDeleted(null)}
-  onConfirm={() => removeRestaurant(restaurantToBeDeleted)}>
-    <TextRegular>The products of this restaurant will be deleted as well</TextRegular>
-    <TextRegular>If the restaurant has orders, it cannot be deleted.</TextRegular>
-</DeleteModal>
+<TextRegular numberOfLines={2}>{item.description}</TextRegular>
+        {item.averageServiceMinutes !== null &&
+          <TextSemiBold>Avg. service time: <TextSemiBold textStyle={{ color: GlobalStyles.brandPrimary }}>{item.averageServiceMinutes} min.</TextSemiBold></TextSemiBold>
+        }
 
-<DeleteModal
-  isVisible={restaurantToBePromoted !== null}
-  onCancel={() => setRestaurantToBePromoted(null)}
-  onConfirm={() => promoteRestaurant(restaurantToBeDeleted)}>
-    <TextRegular>The products of this restaurant will be promoted as well</TextRegular>
-    <TextRegular>If the restaurant has orders, it cannot be promoted.</TextRegular>
-</DeleteModal>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }} >
+          <TextSemiBold>Shipping: <TextSemiBold textStyle={{ color: GlobalStyles.brandPrimary }}>{item.shippingCosts.toFixed(2)}€</TextSemiBold></TextSemiBold>
+        </View>
+```
+
+Encima de 
+
+```JSX
+<View style={styles.actionButtonsContainer}>
+          <Pressable
+            onPress={() => navigation.navigate('EditRestaurantScreen', { id: item.id })}
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed ? GlobalStyles.brandBlueTap : GlobalStyles.brandBlue
+              },
+              styles.actionButton
+            ]}
+          >
+            <View style={[{ flex: 1, flexDirection: 'row', justifyContent: 'center' }]}>
+              <MaterialCommunityIcons name='pencil' color={'white'} size={20} />
+              <TextRegular textStyle={styles.text}>Edit</TextRegular>
+            </View>
+          </Pressable>
 ```
