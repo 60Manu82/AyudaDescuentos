@@ -1,4 +1,4 @@
-# 1. Promocionar un restaurante
+# 1. Descuentos un restaurante
 
 Añadir lo siguiente a `ProductController` que está en el backend, en la carpeta `controllers`
 
