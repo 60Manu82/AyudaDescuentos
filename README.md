@@ -1,161 +1,278 @@
 # 1. Promocionar un restaurante
 
-Añadir lo siguiente a `RestaurantsController` que está en el backend, en la carpeta `controllers`
+Añadir lo siguiente a `ProductController` que está en el backend, en la carpeta `controllers`
 
 ```JSX
-import { Sequelize } from 'sequelize'
+newProduct.basePrice = newProduct.price
 
-
-const promote = async function (req, res) {
+```
+Dentro de 
+```JSX
+const create = async function (req, res) {
+  let newProduct = Product.build(req.body)
   try {
-    const restaurant = await Restaurant.findByPk(req.params.restaurantId)
-    const otherPromotedRestaurant = await Restaurant.findOne({
+
+    // Solution: basePrice updated from price property (given in the student's base project)
+    newProduct.basePrice = newProduct.price
+
+    newProduct = await newProduct.save()
+    res.json(newProduct)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+}
+```
+
+Añadir lo siguiente a `ProductController` que está en el backend, en la carpeta `controllers`
+
+```JSX
+req.body.basePrice = req.body.price
+
+```
+Dentro de 
+```JSX
+const update = async function (req, res) {
+  try {
+    // Solution: basePrice updated from new price property (given in the student's base project)
+    req.body.basePrice = req.body.price
+    await Product.update(req.body, { where: { id: req.params.productId } })
+    let updatedProduct = await Product.findByPk(req.params.productId)
+    res.json(updatedProduct)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+}
+```
+
+Añadir lo siguiente a `RestaurantController` que está en el backend, en la carpeta `controllers`
+
+```JSX
+sequelizeSession
+import { sequelizeSession, Restaurant, Product, RestaurantCategory, ProductCategory } from '../models/models.js'
+import Sequelize from 'sequelize'
+
+```
+Y añadir tambien lo siguiente a `RestaurantController` que está en el backend, en la carpeta `controllers`
+```JSX
+const update = async function (req, res) {
+  try {
+    // Solution: not explicitly requested, but the use of a transaction is valued
+    const transaction = await sequelizeSession.transaction()
+    await Restaurant.update(req.body, { where: { id: req.params.restaurantId } }, transaction)
+
+    const productsToBeUpdated = await Product.findAll({
       where: {
-        promoted: true,
-        id: { [Sequelize.Op.ne]: restaurant.id }
+        restaurantId: req.params.restaurantId
       }
-    })
-    if (otherPromotedRestaurant) {
-      otherPromotedRestaurant.promoted = false
-      await otherPromotedRestaurant.save()
+    });
+
+    for (const product of productsToBeUpdated) {
+      const newPrice = product.basePrice + product.basePrice * (req.body.percentage / 100);
+      await product.update({ price: newPrice }, transaction);
     }
-    restaurant.promoted = true
-    const updatedRestaurant = await restaurant.save()
+
+    await transaction.commit()
+
+    const updatedRestaurant = await Restaurant.findByPk(req.params.restaurantId)
+
     res.json(updatedRestaurant)
   } catch (err) {
     res.status(500).send(err)
   }
 }
+```
 
 
 
-const RestaurantController = {
-  index,
-  indexOwner,
-  create,
-  show,
-  update,
-  destroy,
-  promote
-}
+Añadir lo siguiente a `RestaurantValidation` que está en el backend, en la carpeta `controllers/validations`
+
+```JSX
+check('percentage').exists().isFloat({ min: -5, max: 5 }).toFloat(),
+```
+
+Dentro de 
+
+```JSX
+const update = [
+  check('name').exists().isString().isLength({ min: 1, max: 255 }).trim(),
+  check('description').optional({ nullable: true, checkFalsy: true }).isString().trim(),
+  check('address').exists().isString().isLength({ min: 1, max: 255 }).trim(),
+  check('postalCode').exists().isString().isLength({ min: 1, max: 255 }),
+
+  // Solution: exists validation depends on the implementation of the frontend. If percentage can be
+  // empty and no initial value is set in front, this property should be optional.
+  check('percentage').exists().isFloat({ min: -5, max: 5 }).toFloat(),
+
+  check('url').optional({ nullable: true, checkFalsy: true }).isString().isURL().trim(),
+  check('shippingCosts').exists().isFloat({ min: 0 }).toFloat(),
+  check('email').optional({ nullable: true, checkFalsy: true }).isString().isEmail().trim(),
+  check('phone').optional({ nullable: true, checkFalsy: true }).isString().isLength({ min: 1, max: 255 }).trim(),
+  check('restaurantCategoryId').exists({ checkNull: true }).isInt({ min: 1 }).toInt(),
+  check('userId').not().exists(),
+  check('heroImage').custom((value, { req }) => {
+    return checkFileIsImage(req, 'heroImage')
+  }).withMessage('Please upload an image with format (jpeg, png).'),
+  check('heroImage').custom((value, { req }) => {
+    return checkFileMaxSize(req, 'heroImage', maxFileSize)
+  }).withMessage('Maximum file size of ' + maxFileSize / 1000000 + 'MB'),
+  check('logo').custom((value, { req }) => {
+    return checkFileIsImage(req, 'logo')
+  }).withMessage('Please upload an image with format (jpeg, png).'),
+  check('logo').custom((value, { req }) => {
+    return checkFileMaxSize(req, 'logo', maxFileSize)
+  }).withMessage('Maximum file size of ' + maxFileSize / 1000000 + 'MB'),
+
+]
 ```
 
 Añadir lo siguiente a `create-restaurant` que está en el backend, en la carpeta `database/migrations`
 
 ```JSX
-promoted: {
-        allowNull: false,
-        type: Sequelize.BOOLEAN,
-        defaultValue: false
+percentage: {
+        type: Sequelize.DOUBLE,
+        defaultValue: 0.0
       },
 ```
 
 Debajo de 
 
 ```JSX
-updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: new Date()
+ status: {
+        type: Sequelize.ENUM,
+        values: [
+          'online',
+          'offline',
+          'closed',
+          'temporarily closed'
+        ],
+        defaultValue: 'offline'
       },
 ```
 
 
-La carpeta `database/seeders` son para agregar datos a nuestra base de datos.
-
-
-Añadir lo siguiente a `create-restaurant` que está en el backend, en la carpeta `database/migrations`
+Añadir a la carpeta `database/seeders` para agregar datos a nuestra base de datos en `ProductSeeders`.
 
 ```JSX
-promoted: {
-        allowNull: false,
-        type: Sequelize.BOOLEAN,
-        defaultValue: false
-      },
+ basePrice: 2.5,
 ```
 
-
-Añadir lo siguiente a `RestaurantMiddleware` que está en el backend, en la carpeta `middlewares`
+Dentro de 
 
 ```JSX
-const checkNoOtherPromoted = async (req, res, next) => {
-  try {
-    const prom = req.body.promoted
-    const isPromoted = prom ? req.body.promoted : false
-    const otherPromotedRestaurant = await Restaurant.findOne({
-      where: {
-        promoted: true
-      }
-    })
-    if (otherPromotedRestaurant && isPromoted) {
-      return res.status(422).send('There is already some promoted restaurant')
-    }
-    return next()
-  } catch (error) {
-    return res.status(500).send(error)
-  }
-}
+ { name: 'Ensaladilla', description: 'Tuna salad with mayonnaise', price: 2.5, basePrice: 2.5, image: process.env.PRODUCTS_FOLDER + '/ensaladilla.jpeg', order: 1, availability: true, restaurantId: 1, productCategoryId: 1 },
+        { name: 'Olives', description: 'Home made', price: 1.5, basePrice: 1.5, image: process.env.PRODUCTS_FOLDER + '/aceitunas.jpeg', order: 2, availability: true, restaurantId: 1, productCategoryId: 1 },
+```
+Asi en todos los datos
+
+
+
+
+Añadir lo siguiente a `Product` que está en el backend, en la carpeta `models`
+
+```JSX
+basePrice: DataTypes.DOUBLE,
+```
+
+Dentro de:
+
+```JSX
+Product.init({
+    name: DataTypes.STRING,
+    description: DataTypes.STRING,
+    price: DataTypes.DOUBLE,
+
+    // Solution
+    basePrice: DataTypes.DOUBLE,
+
+    image: DataTypes.STRING,
+    order: DataTypes.INTEGER,
+    availability: DataTypes.BOOLEAN,
+    restaurantId: DataTypes.INTEGER,
+    productCategoryId: DataTypes.INTEGER
+  }, {
+    sequelize,
+    modelName: 'Product'
+  })
 ```
 
 
 Añadir lo siguiente a `Restaurant` que está en el backend, en la carpeta `models`
 
 ```JSX
-promoted: {
-        allowNull: false,
-        type: Sequelize.BOOLEAN,
-        defaultValue: false
-      }
+percentage: {
+      type: DataTypes.DOUBLE,
+      defaultValue: 0.0
+    },
 ```
-
-Debajo de 
+Dentro de:
 
 ```JSX
-updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: new Date()
-      },
+Restaurant.init({
+    name: {
+      allowNull: false,
+      type: DataTypes.STRING
+    },
+    description: DataTypes.TEXT,
+    address: {
+      allowNull: false,
+      type: DataTypes.STRING
+    },
+    postalCode: {
+      allowNull: false,
+      type: DataTypes.STRING
+    },
+    url: DataTypes.STRING,
+    shippingCosts: {
+      allowNull: false,
+      type: DataTypes.DOUBLE
+    },
+    averageServiceMinutes: DataTypes.DOUBLE,
+    email: DataTypes.STRING,
+    phone: DataTypes.STRING,
+    logo: DataTypes.STRING,
+    heroImage: DataTypes.STRING,
+    status: {
+      type: DataTypes.ENUM,
+      values: [
+        'online',
+        'offline',
+        'closed',
+        'temporarily closed'
+      ]
+    },
+
+
+    // Solution
+    percentage: {
+      type: DataTypes.DOUBLE,
+      defaultValue: 0.0
+    },
+
+
+    restaurantCategoryId: {
+      allowNull: false,
+      type: DataTypes.INTEGER
+    },
+    userId: {
+      allowNull: false,
+      type: DataTypes.INTEGER
+    },
+    createdAt: {
+      allowNull: false,
+      type: DataTypes.DATE,
+      defaultValue: new Date()
+    },
+    updatedAt: {
+      allowNull: false,
+      type: DataTypes.DATE,
+      defaultValue: new Date()
+    }
+  }, {
+    sequelize,
+    modelName: 'Restaurant'
+  })
 ```
 
-
-Añadir lo siguiente a `RestaurantRoute` que está en el backend, en la carpeta `routes`
-
-```JSX
-RestaurantMiddleware.checkNoOtherPromoted,
-```
-
-En la funcion `loadFileRoutes`
-
-```JSX
-const loadFileRoutes = function (app) {
-  app.route('/restaurants')
-    .get(
-      RestaurantController.index)
-    .post(
-      isLoggedIn,
-      hasRole('owner'),
-      handleFilesUpload(['logo', 'heroImage'], process.env.RESTAURANTS_FOLDER),
-      RestaurantValidation.create,
-      handleValidation,
-
-      RestaurantMiddleware.checkNoOtherPromoted,
-
-      RestaurantController.create)
-```
-
-Y tambien añadir lo siguiente a `RestaurantRoute` que está en el backend, en la carpeta `routes`
-
-```JSX
-app.route('/restaurants/:restaurantId/promote')
-    .patch(
-      isLoggedIn,
-      hasRole('owner'),
-      checkEntityExists(Restaurant, 'restaurantId'),
-      RestaurantMiddleware.checkRestaurantOwnership,
-      RestaurantController.promote
-    )
-```
 
 
 
